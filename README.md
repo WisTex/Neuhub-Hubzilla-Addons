@@ -2,6 +2,7 @@
 
 * By Federated Works https://federated.works
 * Project home page: https://neuhub.org
+* Extends Hubzilla https://hubzilla.org
 * Sponsored by WisTex TechSero Ltd. Co. https://wistex.com
 
 This repository is part of a trio. 
