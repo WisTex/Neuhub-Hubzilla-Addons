@@ -23,22 +23,25 @@ use Zotlabs\Extend\Route;
  * * These functions register (add) the hook handlers and admin route.
 */
 function directmessage_load() {
-	Hook::register('status_editor', 'addon/directmessage/directmessage.php', 'DirectMessage::status_editor');
+	Hook::register('status_editor', 'addon/directmessage/directmessage.php', 'DirectMssage::status_editor');
+	Route::register('addon/directmessage/Mod_Directmessage.php', 'directmessage');
 }
 
 // * These functions unregister (remove) the hook handlers and admin route.
 function directmessage_unload() {
-	Hook::unregister('status_editor', 'addon/directmessage/directmessage.php', 'DirectMessage::status_editor');
+	Hook::unregister('status_editor', 'addon/directmessage/directmessage.php', 'DirectMssage::status_editor');
+	Route::unregister('addon/directmessage/Mod_Directmessage.php', 'directmessage');
 }
 
 /** 
  * * These functions run when the hook handlers are executed.
 */
-class DirectMessage {
+class DirectMssage {
 	public static function status_editor(&$hook_arr) {
-		//$valid_modules = ['Network', 'Rpost', 'Editpost', 'Hq'];
-		$valid_modules = ['Network'];
-		if (!in_array($hook_arr['module'], $valid_modules)) {
+		//die(print_r($hook_arr));
+		//$valid_modules = ['Network', 'Rpost', 'Editpost', 'Hq', 'Directmessage'];
+		$valid_modules = ['Network', 'Directmessage'];
+		if (!in_array($hook_arr['module'], $valid_modules) || isset($_GET['name'])) {
 			return;
 		}
 		head_add_js('/addon/directmessage/js/custom.js', 200);
