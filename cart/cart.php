@@ -200,6 +200,7 @@ class Cart {
 }
 
 load_config("cart");
+load_config('service_class');
 global $cart_submodules;
 $cart_submodules = ["paypalbuttonV2", "hzservices", "subscriptions", "manualcat", "orderoptions"];
 
