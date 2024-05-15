@@ -683,6 +683,16 @@ class Cart_hzservices {
         $formelements["itemactivation"].=Cart_hzservices::service_class_select();
 
         $formelements["itemactivation"].="</div>\n";
+
+        $formelements["itemdeactivation"].= "<div id=\"cart-admin-merchant-deactivation\">\n";
+        $formelements["itemdeactivation"].= "<h3><u>System Commands</u></h3>\n";
+        $formelements["itemdeactivation"].= replace_macros(get_markup_template('field_radio.tpl'), array(
+                '$field'	=> array('cmd', t('Set Service Class'),
+                "setsvcclass","Set the service class of the user"
+                )));
+        $formelements["itemdeactivation"].=Cart_hzservices::service_class_select();
+
+        $formelements["itemdeactivation"].="</div>\n";
     }
 
     if (isset($item["activate_commands"])) {
@@ -715,17 +725,6 @@ class Cart_hzservices {
       $formelements["activate_commands"].="</UL>\n";
     }
     if (isset($item["deactivate_commands"])) {
-      if (Cart_hzservices::is_admin_merchant()) {
-        $formelements["itemdeactivation"].= "<div id=\"cart-admin-merchant-deactivation\">\n";
-        $formelements["itemdeactivation"].= "<h3><u>System Commands</u></h3>\n";
-        $formelements["itemdeactivation"].= replace_macros(get_markup_template('field_radio.tpl'), array(
-   				     '$field'	=> array('cmd', t('Set Service Class'),
-							 "setsvcclass","Set the service class of the user"
-							 )));
-        $formelements["itemdeactivation"].=Cart_hzservices::service_class_select();
-
-        $formelements["itemdeactivation"].="</div>\n";
-      }
       $formelements["deactivate_commands"]="<UL>\n";
       foreach ($item["deactivate_commands"] as $command) {
         $cmdtext="";
