@@ -83,6 +83,7 @@ function custompage_customize_header(&$content) {
     // Replace Neuhub page header with a custom header
     if (in_array(App::$module, CustomPage::_CUSTOM_PAGES)) {
         //$content = replace_macros(get_markup_template('header_custom.tpl', 'addon/custompage'), []);
+        head_add_css('/addon/custompage/view/css/custompage.css');
     }
 }
 
