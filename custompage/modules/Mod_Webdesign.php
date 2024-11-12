@@ -48,6 +48,7 @@ class Webdesign extends Controller {
 		// Return/Render content in the plugin template's "content" region
 		//return $content;
         //die(print_r(App::$page));
+		//die(print_r(App::$pdl));
         App::$page['title'] = "Web Design";
         App::$page['content'] = $content;
         //App::$page['footer'] = $footer;
