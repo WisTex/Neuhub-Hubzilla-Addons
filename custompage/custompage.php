@@ -8,6 +8,8 @@
  * Category: CustomPage
  * Author: Randall Jaffe
  * Maintainer: Scott M. Stolz
+ * Copyright: 2024 WisTex TechSero Ltd. Co.
+ * License: MIT License
 */
 
 /**
