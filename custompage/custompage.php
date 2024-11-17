@@ -24,11 +24,11 @@
  * 
  * 1. Add your custom page to the `const` variable below.
  * 2. Add routes for each custom URL (both register and unregister).
- * 3. Create a module for each URL. 
+ * 3. Create a module for each URL (in modules directory). 
  *    - Change the class name in the module.
  *    - Change the page title in the module.
- * 4. Create a template for each URL.
- * 5. Create a pdl file if you do not want to use the default theme layout. 
+ * 4. Create a template for each URL (tpl file).
+ * 5. Create a pdl file if you do not want to use the default theme layout (in pdl directory). 
  * 
  * ! Note: If you already have this addon installed on a site: 
  * You will need to deactivate it and reenable it in the Hubzilla admin area (addons section)
