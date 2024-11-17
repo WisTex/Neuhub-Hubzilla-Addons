@@ -1,12 +1,13 @@
 <?php
 /**
  * Name: CustomPage
- * Description: Add a custom page to a theme.
+ * Description: Add a custom page to a theme (with a custom URL).
  * Version: 1.0
  * Depends: Core
  * Recommends: None
  * Category: CustomPage
  * Author: Randall Jaffe
+ * Maintainer: Scott M. Stolz
 */
 
 /**
@@ -14,6 +15,20 @@
  * This is the primary file defining the addon.
  * It defines the name of the addon and gives information about the addon to other components of Hubzilla.
 */
+
+/**
+ * TODO: To Add Pages
+ * If you would like to add pages: 
+ * 
+ * 1. Add your custom page to the `const` variable below.
+ * 2. Add routes for each custom URL (both register and unregister).
+ * 3. Create a module for each URL. Change the class name in the module.
+ * 4. Create a template for each URL.
+ * 
+ * ! Note: If you already have this addon installed on a site: 
+ * You will need to deactivate it and reenable it in the Hubzilla admin area (addons section)
+ * for it to recognize the new pages. (It needs to register the new pages.)
+ */
 
 use Zotlabs\Lib\Apps;
 use Zotlabs\Extend\Hook;
@@ -36,7 +51,8 @@ function custompage_load() {
     Hook::register('load_pdl', 'addon/custompage/custompage.php', 'custompage_load_pdl');
     Hook::register('page_header', 'addon/custompage/custompage.php', 'custompage_customize_header');
     Hook::register('page_end', 'addon/custompage/custompage.php', 'custompage_customize_footer');
-	Route::register('addon/custompage/modules/Mod_Webdesign.php', 'webdesign');
+	/* You will need a route and a corresponding module for every custom URL */
+    Route::register('addon/custompage/modules/Mod_Webdesign.php', 'webdesign');
     Route::register('addon/custompage/modules/Mod_Hubzilla.php', 'hubzilla');
 }
 
@@ -46,6 +62,7 @@ function custompage_unload() {
     Hook::unregister('load_pdl', 'addon/custompage/custompage.php', 'custompage_load_pdl');
 	Hook::unregister('page_header', 'addon/custompage/custompage.php', 'custompage_customize_header');
     Hook::unregister('page_end', 'addon/custompage/custompage.php', 'custompage_customize_footer');
+    /* You will need a route and a corresponding module for every custom URL */
 	Route::unregister('addon/custompage/modules/Mod_Webdesign.php', 'webdesign');
     Route::unregister('addon/custompage/modules/Mod_Hubzilla.php', 'hubzilla');
 }
