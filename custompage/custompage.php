@@ -27,7 +27,7 @@
  * 3. Create a module for each URL (in modules directory). 
  *    - Change the class name in the module.
  *    - Change the page title in the module.
- *    - Add any programming logic or database calls (if you want to do more than just display the html in the tpl file).
+ *    - Add programming logic or database calls (if you want to do more than just display the html in the tpl file).
  * 4. Create a template for each URL (tpl file).
  * 5. Create a pdl file if you do not want to use the default theme layout (in pdl directory). 
  * 
