@@ -1,4 +1,5 @@
-[template]custompage[/template]
+[theme]neuhub-tab[/theme]
+[template]custompage-default[/template]
 
 [region=aside]
 [widget=notifications][/widget]
