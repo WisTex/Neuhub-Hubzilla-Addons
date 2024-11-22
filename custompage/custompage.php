@@ -62,6 +62,7 @@ class CustomPage {
  * The "webdesign" route is created for Mod_Webdesign module 
 */
 function custompage_load() {
+    Hook::register('logged_in', 'addon/custompage/custompage.php', 'custompage_logged_in');
     Hook::register('module_loaded', 'addon/custompage/custompage.php', 'custompage_load_module');
     Hook::register('load_pdl', 'addon/custompage/custompage.php', 'custompage_load_pdl');
     Hook::register('page_header', 'addon/custompage/custompage.php', 'custompage_customize_header');
@@ -76,6 +77,7 @@ function custompage_load() {
 
 // * This function unregisters (removes) the hook handler and route.
 function custompage_unload() {
+    Hook::unregister('logged_in', 'addon/custompage/custompage.php', 'custompage_logged_in');
     Hook::unregister('module_loaded', 'addon/custompage/custompage.php', 'custompage_load_module');
     Hook::unregister('load_pdl', 'addon/custompage/custompage.php', 'custompage_load_pdl');
 	Hook::unregister('page_header', 'addon/custompage/custompage.php', 'custompage_customize_header');
@@ -86,6 +88,15 @@ function custompage_unload() {
     Route::unregister('addon/custompage/modules/Mod_Main.php', 'main');
 	Route::unregister('addon/custompage/modules/Mod_Webdesign.php', 'webdesign');
     Route::unregister('addon/custompage/modules/Mod_Hubzilla.php', 'hubzilla');
+}
+
+/** 
+ * * This function runs when the hook handler is executed.
+ * @param $user: A reference to App::$account or App::$user
+*/
+function custompage_logged_in(&$user) {
+	goaway(z_root() . "/hq");
+	killme();
 }
 
 /** 
