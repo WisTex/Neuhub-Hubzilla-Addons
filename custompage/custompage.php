@@ -46,6 +46,13 @@ use Zotlabs\Module\Main;
 
 class CustomPage {
     const _CUSTOM_PAGES = ['main', 'webdesign', 'hubzilla'];
+    public static function loadAssets(): void {
+        if (file_exists(PROJECT_BASE . '/addon/custompage/view/js/custompage.js'))
+            head_add_js('/addon/custompage/view/js/custompage.js');
+
+        if (file_exists(PROJECT_BASE . '/addon/custompage/view/css/custompage.css'))
+            head_add_css('/addon/custompage/view/css/custompage.css');
+    }
 }
 
 /**
@@ -96,7 +103,7 @@ function custompage_home_redirect(&$o) {
     $pdl = @file_get_contents('addon/custompage/pdl/mod_main.pdl');
     App::$comanche->parse($pdl);
     App::$pdl = $pdl;
-    head_add_css('/addon/custompage/view/css/custompage.css');
+    CustomPage::loadAssets();
     if (method_exists($module, 'get')) {
         $o = $module->get();
     }
@@ -115,7 +122,7 @@ function custompage_home_redirect_loggedin(&$ret) {
     App::$comanche = new Comanche();
     App::$comanche->parse($pdl);
     App::$pdl = $pdl;
-    head_add_css('/addon/custompage/view/css/custompage.css');
+    CustomPage::loadAssets();
     if (method_exists($module, 'get')) {
         App::$page['content'] = $module->get();
     }
@@ -156,7 +163,7 @@ function custompage_customize_header(&$content) {
     // Replace Neuhub page header with a custom header
     if (in_array(App::$module, CustomPage::_CUSTOM_PAGES)) {
         //$content = replace_macros(get_markup_template('header_custom.tpl', 'addon/custompage'), []);
-        head_add_css('/addon/custompage/view/css/custompage.css');
+        CustomPage::loadAssets();
     }
 }
 
