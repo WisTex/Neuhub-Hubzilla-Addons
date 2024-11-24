@@ -6,7 +6,7 @@
                 {{if $post.title}}
                     <h4><a href="{{$post.mid}}">{{$post.title}}</a></h4>
                 {{/if}}
-                {{$post.blurb}} <a href="{{$post.mid}}">READ MORE »</a>
+                <span class="strong" style="color: #333">{{$post.created}}</span> - {{$post.blurb}} <a href="{{$post.mid}}">READ MORE »</a>
             </div>
         {{/foreach}}
     </div>
