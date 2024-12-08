@@ -59,8 +59,9 @@ function seo_add_metadata(&$pagemeta) {
     $cleanUrl = z_root() . parse_url($thisUrl, PHP_URL_PATH);
     switch (App::$module) {
         case 'channel':
-            if (!empty($_GET['mid']) && (int)preg_match_all('/<div.*?id="opendiv-[^"]+"[^>]*>(.+?)<\/div>/is', App::$page['content'], $matches) > 0) {
-                $pagemeta['description'] = SEO::ellipsify(strip_tags(end($matches[1])), 150);
+            if (!empty($_GET['mid']) && ((int)preg_match_all('/<div.*?id="opendiv-[^"]+"[^>]*>(.+?)<\/div>/is', App::$page['content'], $matches) > 0 || preg_match('/<div.*?class="wall-item-body e-content"[^>]*>(.+?)<\/div>/is', App::$page['content'], $matches2) == 1)) {
+                $descTxt = (!empty($matches[1])) ? end($matches[1]) : $matches2[1];
+                $pagemeta['description'] = SEO::ellipsify(strip_tags(trim($descTxt)), 150);
                 head_add_link(['rel' => 'canonical', 'href' => $cleanUrl . '?mid=' . htmlspecialchars($_GET['mid'], ENT_QUOTES, 'UTF-8')]);                
             } else {
                 $pagemeta['description'] = 'All posts to channel owned by ' . App::$page['title'];
