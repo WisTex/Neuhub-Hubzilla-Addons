@@ -42,7 +42,8 @@ class Sitemap extends Controller {
 
         // Get Channel URLs
 		$r = q("SELECT item.* FROM item
-			WHERE item.item_private = 0 AND item.obj_type = 'Note' AND item.item_origin = 1 AND item.item_deleted = 0 AND item.item_hidden = 0
+			WHERE item.item_private = 0 AND item.obj_type = 'Note' AND item.verb = 'Create' AND item.item_deleted = 0 AND item.item_hidden = 0 AND item.item_type = 0
+            GROUP BY item.uuid
 			ORDER BY item.created DESC LIMIT %d",
 			45000
 		);
