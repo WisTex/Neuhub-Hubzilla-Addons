@@ -39,7 +39,7 @@ class SEO {
         $urlSlug = '';
         $slugSrc = (empty($item['title'])) ? ((empty($item['summary'])) ? $item['body'] : $item['summary']) : $item['title'];
         if (!empty($slugSrc)) {
-            $urlSlug = preg_replace('/\s+/', "-", preg_replace('/\p{P}/u', "", trim(strip_tags($slugSrc))));
+            $urlSlug = preg_replace('/\s+/', "-", preg_replace('/\p{P}/u', "", trim(strip_tags(bbcode($slugSrc)))));
             $urlSlug = "/" . self::ellipsify($urlSlug, 100, "");
         }
         return $url . $urlSlug;
@@ -52,10 +52,10 @@ class SEO {
         );
         if ($r) {
             //die(print_r($r[0]));
-            $pagemeta['description'] = self::ellipsify(strip_tags(trim($r[0]['body'])), 150);
+            $pagemeta['description'] = self::ellipsify(strip_tags(bbcode(trim($r[0]['body']))), 150);
             $pageTitle = trim(App::$page['title'], '- ');
             $isChildItem = $r[0]['mid'] != $r[0]['parent_mid'];
-            App::$page['title'] = (empty($pageTitle) || $isChildItem) ? $pagemeta['description'] : App::$page['title'];
+            App::$page['title'] = (empty($pageTitle) || $isChildItem) ? $pagemeta['description'] : strip_tags(bbcode(App::$page['title']));
             head_add_link(['rel' => 'canonical', 'href' => z_root() . "/" . self::generatePermalink($r[0])]);
         }
     }
