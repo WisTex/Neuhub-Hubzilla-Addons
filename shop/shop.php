@@ -45,16 +45,24 @@ class Shop {
         $sql = "CREATE TABLE IF NOT EXISTS shop_subscriptions (
                     id int(10) UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
                     aid int(10) UNSIGNED NOT NULL DEFAULT 0,
-                    sub_pdt mediumtext,
-                    sub_ipn mediumtext,
+                    sub_transaction_token varchar(40) NOT NULL DEFAULT '',
+                    sub_pdt mediumtext NOT NULL,
+                    sub_ipn mediumtext NOT NULL,
                     sub_created datetime NOT NULL DEFAULT '0001-01-01 00:00:00',
                     sub_expires datetime NOT NULL DEFAULT '0001-01-01 00:00:00',
-                    sub_disabled tinyint(1) NOT NULL DEFAULT 0
+                    sub_disabled tinyint(1) NOT NULL DEFAULT 0,
+                    UNIQUE (sub_transaction_token),
+                    KEY aid (aid),
+                    KEY sub_disabled (sub_disabled)
                 ) ENGINE = InnoDB DEFAULT CHARSET=utf8mb4;";
         $r = q($sql);
         if (!$r) {
             logger('[shop] Error running Shop::init() CREATE TABLE sql query: ' . $sql);
-        }        
+        } 
+        foreach (self::_PLANS as $plan) {
+            Config::Set('service_class', $plan, "json:{}");
+            logger('[shop] Shop::init(): Created service class: ' . $plan);
+        }       
     }
     public static function processPayment(): bool {
         $success = false;
@@ -63,10 +71,10 @@ class Shop {
             switch ($_GET['st']) {
                 case 'COMPLETED':
                     // Payment completed
-                    // TO-DO: SQL SELECT JOIN query to ensure subscription and/or service class not yet inserted/updated, to prevent duplicates 
-                    $r = q("INSERT INTO shop_subscriptions (aid, sub_pdt, sub_created, sub_expires) 
-                        VALUES (%d, '%s', NOW(), NOW() + INTERVAL %s);",
+                    $r = q("INSERT INTO shop_subscriptions (aid, sub_transaction_token, sub_pdt, sub_created, sub_expires) 
+                        VALUES (%d, '%s', '%s', NOW(), NOW() + INTERVAL %s);",
                         intval($aid),
+                        dbesc($_GET['tx']),
                         dbesc($_SERVER['QUERY_STRING']),
                         dbesc(self::_TERM_LENGTH . " " . self::_TERM_UNITS)
                     );
