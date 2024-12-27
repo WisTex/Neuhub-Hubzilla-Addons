@@ -22,13 +22,18 @@ use Zotlabs\Extend\Route;
 use Zotlabs\Lib\Config;
 
 class Shop {
-    const _SHOP_PAGES = ['shop'];
+    const _SHOP_PAGES = ['shop'];  // For all "/shop/*" pages
+    const _PLAN_PAGES = ['starter', 'premium'];  // For all "/starter/*" or "/premium/*" pages
     const _TERM_LENGTH = '1';
     const _TERM_UNITS = 'MONTH';  // YEAR, MONTH, DAY, HOUR, MINUTE, or SECOND
     const _PLANS = [
+        // Must be listed in ascending order!
         '9.95' => 'starter',
         '19.95' => 'premium'
     ];
+    public static function getAllPages(): array {
+        return array_merge(self::_SHOP_PAGES, self::_PLAN_PAGES);
+    }
     public static function checkDependency($addon): bool {
         $addons = Config::get('system', 'addon', '');
         if (!empty($addons)) {
@@ -58,12 +63,38 @@ class Shop {
         $r = q($sql);
         if (!$r) {
             logger('[shop] Error running Shop::init() CREATE TABLE sql query: ' . $sql);
-        } 
-        foreach (self::_PLANS as $plan) {
-            Config::Set('service_class', $plan, "json:{}");
+        }
+        Config::Set('system', 'default_service_class', 'default');
+        $serviceClassVals = self::generateCumulativeValues(count(self::_PLANS));
+        Config::Set('service_class', 'default', self::buildServiceClass(array_shift($serviceClassVals)));
+        $plans = array_values(self::_PLANS);
+        foreach ($plans as $k => $plan) {
+            Config::Set('service_class', $plan, self::buildServiceClass($serviceClassVals[$k]));
             logger('[shop] Shop::init(): Created service class: ' . $plan);
         }       
     }
+    private static function buildServiceClass(array $values): string {
+        $serviceClass = 'json:{';
+        $values = (count($values) != count(self::_PLANS)) ? array_fill(0, count(self::_PLANS), '0') : $values;
+        $plans = array_values(self::_PLANS);
+        foreach ($plans as $k => $plan) {
+            $serviceClass .= '"' . $plan . '":"' . $values[$k] . '"';
+            $serviceClass .= ($plan != end($plans)) ? ',' : '';
+        }
+        return $serviceClass . '}';
+    }
+    private static function generateCumulativeValues($n): array {
+        $result = [];
+        $result[] = array_fill(0, $n, 0);
+        for ($i = 1; $i <= $n; $i++) {
+            $array = array_fill(0, $n, 0); 
+            for ($j = 0; $j < $i; $j++) {
+                $array[$j] = 1;
+            }
+            $result[] = $array;
+        }
+        return $result;
+    }    
     public static function processPayment(): bool {
         $success = false;
         $aid = get_account_id();
@@ -80,6 +111,15 @@ class Shop {
                     );
                     if (!$r) {
                         logger('[shop] Shop::processPayment(): DB shop_subscriptions INSERT failed.');
+                        if (isset(DBA::$dba->error) && preg_match('/1062 Duplicate entry/i', DBA::$dba->error) == 1) {
+                            $r = q("SELECT * FROM shop_subscriptions WHERE sub_transaction_token = '%s'",
+                                dbesc($_GET['tx'])
+                            );
+                            if ($r !== false && !empty($r)) {
+                                App::$cache['shop_payment_duplicate'] = current($r);
+                                $success = true;
+                            }
+                        }
                     } 
                     else {
                         $r = q("UPDATE account SET account_service_class = '%s' WHERE account_id = %d", 
@@ -109,8 +149,9 @@ class Shop {
 */
 function shop_load() {
     Hook::register('module_loaded', 'addon/shop/shop.php', 'shop_load_module');
-    foreach (Shop::_SHOP_PAGES as $page) {
-        Route::register('addon/custompage/modules/Mod_Shop.php', $page);
+    Hook::register('load_pdl', 'addon/shop/shop.php', 'shop_load_pdl');
+    foreach (Shop::getAllPages() as $page) {
+        Route::register('addon/custompage/modules/shop/Mod_' . ucfirst($page) . '.php', $page);
     }
     Shop::init();
 }
@@ -118,8 +159,9 @@ function shop_load() {
 // * This function unregisters (removes) the hook handler and route.
 function shop_unload() {
     Hook::unregister('module_loaded', 'addon/shop/shop.php', 'shop_load_module');
-    foreach (Shop::_SHOP_PAGES as $page) {
-        Route::unregister('addon/custompage/modules/Mod_Shop.php', $page);
+    Hook::unregister('load_pdl', 'addon/shop/shop.php', 'shop_load_pdl');
+    foreach (Shop::getAllPages() as $page) {
+        Route::unregister('addon/custompage/modules/shop/Mod_' . ucfirst($page) . '.php', $page);
     }
 }
 
@@ -129,9 +171,26 @@ function shop_unload() {
 */
 function shop_load_module(&$arr) {
     if (Shop::checkDependency('custompage')) {
-        CustomPage::setCustomPages(array_merge(CustomPage::getCustomPages(), Shop::_SHOP_PAGES));
+        CustomPage::setCustomPages(array_merge(CustomPage::getCustomPages(), Shop::getAllPages()));
     }
     if ($arr['module'] == 'shop' && argc() > 1 && argv(1) == 'completed') {
         App::$cache['shop_payment_success'] = Shop::processPayment();
+        //App::$cache['shop_payment_success'] = false;
     }
+    if (in_array($arr['module'], Shop::_PLAN_PAGES)) {
+        $aid = get_account_id();
+        App::$cache['shop_access_allowed'] = ($aid !== false) ? account_service_class_allows($aid, $arr['module'], 0) : false;
+    }
+}
+
+/** 
+ * * This function runs when the hook handler is executed.
+ * @param $arr: A reference to current module and layout
+*/
+function shop_load_pdl(&$arr) {
+    //die(print_r($arr));
+	$pdl = 'addon/custompage/pdl/shop/mod_' . $arr['module'] . '.pdl';
+    if (in_array($arr['module'], Shop::getAllPages()) && file_exists($pdl)) {
+        $arr['layout'] = @file_get_contents($pdl);
+	}
 }
