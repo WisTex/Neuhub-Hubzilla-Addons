@@ -31,6 +31,8 @@ class Shop {
         '9.95' => 'starter',
         '19.95' => 'premium'
     ];
+    const _PAYPAL_PDT_TOKEN = 'UpM6gyqLdAvKjBNRyEjLP3GF82et_W0uPYStNIxefauuo1lqAJqvlLPb5Qi';
+    const _PAYPAL_SANDBOX = true;
     public static function getAllPages(): array {
         return array_merge(self::_SHOP_PAGES, self::_PLAN_PAGES);
     }
@@ -58,6 +60,7 @@ class Shop {
                     sub_disabled tinyint(1) NOT NULL DEFAULT 0,
                     UNIQUE (sub_transaction_token),
                     KEY aid (aid),
+                    KEY sub_expires (sub_expires),
                     KEY sub_disabled (sub_disabled)
                 ) ENGINE = InnoDB DEFAULT CHARSET=utf8mb4;";
         $r = q($sql);
@@ -71,7 +74,8 @@ class Shop {
         foreach ($plans as $k => $plan) {
             Config::Set('service_class', $plan, self::buildServiceClass($serviceClassVals[$k]));
             logger('[shop] Shop::init(): Created service class: ' . $plan);
-        }       
+        }
+        /* To-Do: Consider setting a "default" service level for all existing accounts with no/empty service level? */
     }
     private static function buildServiceClass(array $values): string {
         $serviceClass = 'json:{';
@@ -94,48 +98,88 @@ class Shop {
             $result[] = $array;
         }
         return $result;
-    }    
+    } 
+    private static function sendPdtRequest($transactionId): array {
+        $data = [];
+        $sandboxStr = (self::_PAYPAL_SANDBOX) ? 'sandbox.' : '';
+        $paypalUrl = 'https://www.' . $sandboxStr . 'paypal.com/cgi-bin/webscr';
+        $postVars = "cmd=_notify-synch&tx=" . $transactionId . "&at=" . self::_PAYPAL_PDT_TOKEN;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $paypalUrl);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postVars);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        $response = curl_exec($ch);
+        curl_close($ch);
+        if (curl_errno($ch) == 0 && curl_getinfo($ch, CURLINFO_HTTP_CODE) == 200 && !empty($response)) {
+            //die($response);
+            $lines = preg_split('/\n|\r/', trim($response), -1, PREG_SPLIT_NO_EMPTY);
+            $first_line = array_shift($lines);
+            if ($first_line == "SUCCESS") {
+                foreach ($lines as $line) {
+                    $lineParts = explode("=", $line, 2);
+                    $data[urldecode($lineParts[0])] = urldecode($lineParts[1]);
+                }
+            }
+        }
+        return $data;
+    }
     public static function processPayment(): bool {
         $success = false;
-        $aid = get_account_id();
-        if ($aid !== false && isset($_GET['tx'], $_GET['st'], $_GET['amt'], self::_PLANS[$_GET['amt']])) {
-            switch ($_GET['st']) {
-                case 'COMPLETED':
-                    // Payment completed
-                    $r = q("INSERT INTO shop_subscriptions (aid, sub_transaction_token, sub_pdt, sub_created, sub_expires) 
-                        VALUES (%d, '%s', '%s', NOW(), NOW() + INTERVAL %s);",
-                        intval($aid),
-                        dbesc($_GET['tx']),
-                        dbesc($_SERVER['QUERY_STRING']),
-                        dbesc(self::_TERM_LENGTH . " " . self::_TERM_UNITS)
-                    );
-                    if (!$r) {
-                        logger('[shop] Shop::processPayment(): DB shop_subscriptions INSERT failed.');
-                        if (isset(DBA::$dba->error) && preg_match('/1062 Duplicate entry/i', DBA::$dba->error) == 1) {
-                            $r = q("SELECT * FROM shop_subscriptions WHERE sub_transaction_token = '%s'",
-                                dbesc($_GET['tx'])
+        if (isset($_GET['tx'])) {
+            App::$cache['shop_payment_data'] = $data = self::sendPdtRequest($_GET['tx']);
+            if (!empty($data)) {
+                $aid = get_account_id();
+                if ($aid !== false && isset($data['payment_status'], $data['txn_id'], $data['payment_gross'])) {
+                    switch ($data['payment_status']) {
+                        case 'Completed':
+                            // Payment completed
+                            $r = q("INSERT INTO shop_subscriptions (aid, sub_transaction_token, sub_pdt, sub_created, sub_expires) 
+                                VALUES (%d, '%s', '%s', NOW(), NOW() + INTERVAL %s);",
+                                intval($aid),
+                                dbesc($data['txn_id']),
+                                dbesc(json_encode($data)),
+                                dbesc(self::_TERM_LENGTH . " " . self::_TERM_UNITS)
                             );
-                            if ($r !== false && !empty($r)) {
-                                App::$cache['shop_payment_duplicate'] = current($r);
-                                $success = true;
+                            if (!$r) {
+                                logger('[shop] Shop::processPayment(): DB shop_subscriptions INSERT failed.');
+                                if (isset(DBA::$dba->error) && preg_match('/1062 Duplicate entry/i', DBA::$dba->error) == 1) {
+                                    $r = q("SELECT * FROM shop_subscriptions WHERE sub_transaction_token = '%s'",
+                                        dbesc($data['txn_id'])
+                                    );
+                                    if ($r !== false && !empty($r)) {
+                                        App::$cache['shop_payment_duplicate'] = current($r);
+                                        $success = true;
+                                    }
+                                }
+                            } 
+                            else {
+                                // Disable other account subscriptions, if any exist
+                                $r = q("UPDATE shop_subscriptions SET sub_disabled = 1 WHERE aid = %d AND sub_transaction_token <> '%s'",
+                                    intval($aid),
+                                    dbesc($data['txn_id'])
+                                );
+                                if (!$r) {
+                                    logger('[shop] Shop::processPayment(): DB shop_subscriptions UPDATE failed.');
+                                }
+                                
+                                $r = q("UPDATE account SET account_service_class = '%s' WHERE account_id = %d", 
+                                    dbesc(self::_PLANS[$data['payment_gross']]),
+                                    intval($aid)
+                                );
+                                if (!$r) {
+                                    logger('[shop] Shop::processPayment(): DB account_service_class UPDATE failed.');
+                                } else {
+                                    $success = true; 
+                                }
                             }
-                        }
+                            break; 
+                        default:
+                            break;
                     } 
-                    else {
-                        $r = q("UPDATE account SET account_service_class = '%s' WHERE account_id = %d", 
-                            dbesc(self::_PLANS[$_GET['amt']]),
-                            intval($aid)
-                        );
-                        if (!$r) {
-                            logger('[shop] Shop::processPayment(): DB account_service_class UPDATE failed.');
-                        } else {
-                            $success = true; 
-                        }
-                    }
-                    break; 
-                default:
-                    break;
-            } 
+                }
+            }
         }
         return $success;    
     }
@@ -150,6 +194,7 @@ class Shop {
 function shop_load() {
     Hook::register('module_loaded', 'addon/shop/shop.php', 'shop_load_module');
     Hook::register('load_pdl', 'addon/shop/shop.php', 'shop_load_pdl');
+    Hook::register('cron', 'addon/shop/shop.php', 'shop_cron');
     foreach (Shop::getAllPages() as $page) {
         Route::register('addon/custompage/modules/shop/Mod_' . ucfirst($page) . '.php', $page);
     }
@@ -160,6 +205,7 @@ function shop_load() {
 function shop_unload() {
     Hook::unregister('module_loaded', 'addon/shop/shop.php', 'shop_load_module');
     Hook::unregister('load_pdl', 'addon/shop/shop.php', 'shop_load_pdl');
+    Hook::unregister('cron', 'addon/shop/shop.php', 'shop_cron');
     foreach (Shop::getAllPages() as $page) {
         Route::unregister('addon/custompage/modules/shop/Mod_' . ucfirst($page) . '.php', $page);
     }
@@ -193,4 +239,17 @@ function shop_load_pdl(&$arr) {
     if (in_array($arr['module'], Shop::getAllPages()) && file_exists($pdl)) {
         $arr['layout'] = @file_get_contents($pdl);
 	}
+}
+
+/** 
+ * * This function runs when the hook handler is executed.
+ * @param $arr: A reference to current date/time as datetime value
+*/
+function shop_cron(&$datetime) {
+    $u = q("UPDATE shop_subscriptions, account 
+        SET shop_subscriptions.sub_disabled = 1, account.account_service_class = 'default'
+        WHERE shop_subscriptions.aid = account.account_id AND shop_subscriptions.sub_disabled = 0 AND shop_subscriptions.sub_expires < NOW()");
+    if (!$u) {
+        logger('[shop] shop_cron(): DB shop_subscriptions UPDATE failed.');
+    }
 }
