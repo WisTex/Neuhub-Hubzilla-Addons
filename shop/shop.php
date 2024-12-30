@@ -31,6 +31,7 @@ class Shop {
         '9.95' => 'starter',
         '19.95' => 'premium'
     ];
+    const _PAYPAL_EMAILS = ['chump2877-facilitator@yahoo.com'];  // Include both sandbox and live emails
     const _PAYPAL_PDT_TOKEN = 'UpM6gyqLdAvKjBNRyEjLP3GF82et_W0uPYStNIxefauuo1lqAJqvlLPb5Qi';
     const _PAYPAL_SANDBOX = true;
     public static function getAllPages(): array {
@@ -111,7 +112,6 @@ class Shop {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         $response = curl_exec($ch);
-        curl_close($ch);
         if (curl_errno($ch) == 0 && curl_getinfo($ch, CURLINFO_HTTP_CODE) == 200 && !empty($response)) {
             //die($response);
             $lines = preg_split('/\n|\r/', trim($response), -1, PREG_SPLIT_NO_EMPTY);
@@ -123,6 +123,7 @@ class Shop {
                 }
             }
         }
+        curl_close($ch);
         return $data;
     }
     public static function processPayment(): bool {
@@ -183,6 +184,119 @@ class Shop {
         }
         return $success;    
     }
+    private static function sendIpnRequest(array $data): bool {
+        $sandboxStr = (self::_PAYPAL_SANDBOX) ? 'sandbox.' : '';
+        $paypalUrl = 'https://ipnpb.' . $sandboxStr . 'paypal.com/cgi-bin/webscr';        
+        $postVars = 'cmd=_notify-validate';
+        foreach ($data as $key => $value) {
+            $postVars .= '&' . $key . '=' . urlencode($value);
+        }
+        $ch = curl_init($paypalUrl);
+        curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postVars);
+        curl_setopt($ch, CURLOPT_SSLVERSION, 6);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 1);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+        curl_setopt($ch, CURLOPT_FORBID_REUSE, 1);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'User-Agent: PHP-IPN-Verification-Script',
+            'Connection: Close'
+        ]);
+        $response = curl_exec($ch);
+        $retval = curl_errno($ch) == 0 && curl_getinfo($ch, CURLINFO_HTTP_CODE) == 200 && $response == 'VERIFIED';
+        curl_close($ch);
+        return $retval;
+    }
+    public static function processIPN(): void {
+        $rawPostData = file_get_contents('php://input');
+        $rawPostArr = explode('&', $rawPostData);
+        $data = [];
+        foreach ($rawPostArr as $keyval) {
+            $keyval = explode('=', $keyval, 2);
+            $data[$keyval[0]] = urldecode($keyval[1]);
+        }
+        logger("[shop] PayPal IPN variables: " . print_r($data, true));
+        if (!empty($data) && self::sendIpnRequest($data) && isset($data['receiver_email']) && in_array($data['receiver_email'], self::_PAYPAL_EMAILS)) {
+            if (isset($data['payment_status'], $data['txn_id'], $data['payment_gross'], $data['custom'])) {
+                $aid = (int)$data['custom'];
+                if ($data['payment_status'] == 'Completed') {
+                    // Payment completed
+                    $r = q("INSERT INTO shop_subscriptions (aid, sub_transaction_token, sub_ipn, sub_created, sub_expires) 
+                        VALUES (%d, '%s', '%s', NOW(), NOW() + INTERVAL %s);",
+                        intval($aid),
+                        dbesc($data['txn_id']),
+                        dbesc(json_encode([$data])),
+                        dbesc(self::_TERM_LENGTH . " " . self::_TERM_UNITS)
+                    );
+                    if (!$r) {
+                        logger('[shop] Shop::processIPN(): DB shop_subscriptions INSERT failed.');
+                    } 
+                    else {
+                        // Disable other account subscriptions, if any exist
+                        $r = q("UPDATE shop_subscriptions SET sub_disabled = 1 WHERE aid = %d AND sub_transaction_token <> '%s'",
+                            intval($aid),
+                            dbesc($data['txn_id'])
+                        );
+                        if (!$r) {
+                            logger('[shop] Shop::processIPN(): DB shop_subscriptions UPDATE failed.');
+                        }
+                        
+                        $r = q("UPDATE account SET account_service_class = '%s' WHERE account_id = %d", 
+                            dbesc(self::_PLANS[$data['payment_gross']]),
+                            intval($aid)
+                        );
+                        if (!$r) {
+                            logger('[shop] Shop::processIPN(): DB account_service_class UPDATE failed.');
+                        }
+                    }
+                }
+                else {
+                    if (isset($data['parent_txn_id'])) {
+                        $r = q("SELECT * FROM shop_subscriptions WHERE aid = %d AND sub_transaction_token = '%s'",
+                            intval($aid),
+                            dbesc($data['parent_txn_id'])
+                        );
+                        if ($r !== false && count($r) == 1) {
+                            $ipn = (!empty($r[0]['sub_ipn'])) ? json_decode($r[0]['sub_ipn'], true) : [];
+                            $ipn = (json_last_error() == JSON_ERROR_NONE && !empty($ipn)) ? json_encode(array_merge([$data], $ipn)) : json_encode([$data]);
+                            switch ($data['payment_status']) {
+                                case 'Refunded':
+                                case 'Reversed':                                
+                                    $u = q("UPDATE shop_subscriptions, account 
+                                        SET shop_subscriptions.sub_disabled = 1, shop_subscriptions.sub_ipn = '%s', account.account_service_class = 'default'
+                                        WHERE shop_subscriptions.aid = account.account_id AND shop_subscriptions.aid = %d AND shop_subscriptions.sub_transaction_token = '%s'",
+                                        dbesc($ipn),
+                                        intval($aid),
+                                        dbesc($data['parent_txn_id'])
+                                    );
+                                    if (!$u) {
+                                        logger('[shop] Shop::processIPN(): Refund/Reversal: DB shop_subscriptions UPDATE failed.');
+                                    }
+                                    break;
+                                case 'Canceled_Reversal':
+                                    $paymentGross = (float)$data['payment_gross'] + (float)$data['payment_fee'];
+                                    $u = q("UPDATE shop_subscriptions, account 
+                                        SET shop_subscriptions.sub_disabled = 0, shop_subscriptions.sub_ipn = '%s', account.account_service_class = '%s'
+                                        WHERE shop_subscriptions.aid = account.account_id AND shop_subscriptions.aid = %d AND shop_subscriptions.sub_transaction_token = '%s'",
+                                        dbesc($ipn),
+                                        dbesc(self::_PLANS[(string)$paymentGross] ?? 'default'),
+                                        intval($aid),
+                                        dbesc($data['parent_txn_id'])
+                                    );
+                                    if (!$u) {
+                                        logger('[shop] Shop::processIPN(): Reversal Canceled: DB shop_subscriptions UPDATE failed.');
+                                    }                                
+                                    break;
+                            }
+                        }
+                    } 
+                }
+            }           
+        }
+    }
 }
 
 /**
@@ -223,6 +337,10 @@ function shop_load_module(&$arr) {
         App::$cache['shop_payment_success'] = Shop::processPayment();
         //App::$cache['shop_payment_success'] = false;
     }
+    if ($arr['module'] == 'shop' && argc() > 1 && argv(1) == 'ipn') {
+        Shop::processIPN();
+        killme();
+    }    
     if (in_array($arr['module'], Shop::_PLAN_PAGES)) {
         $aid = get_account_id();
         App::$cache['shop_access_allowed'] = ($aid !== false) ? account_service_class_allows($aid, $arr['module'], 0) : false;
