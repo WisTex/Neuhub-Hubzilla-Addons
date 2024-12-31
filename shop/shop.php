@@ -26,6 +26,14 @@ class Shop {
     const _PLAN_PAGES = ['starter', 'premium'];  // For all "/starter/*" or "/premium/*" pages
     const _TERM_LENGTH = '1';
     const _TERM_UNITS = 'MONTH';  // YEAR, MONTH, DAY, HOUR, MINUTE, or SECOND
+    const _TERM_OPTS = [					
+        'YEAR' => 'YEAR',
+        'MONTH' => 'MONTH'  ,
+        'DAY' => 'DAY'   ,
+        'HOUR' => 'HOUR'  ,
+        'MINUTE' => 'MINUTE' ,
+        'SECOND' => 'SECOND'
+    ];
     const _PLANS = [
         // Must be listed in ascending order!
         '9.95' => 'starter',
@@ -309,6 +317,7 @@ function shop_load() {
     Hook::register('module_loaded', 'addon/shop/shop.php', 'shop_load_module');
     Hook::register('load_pdl', 'addon/shop/shop.php', 'shop_load_pdl');
     Hook::register('cron', 'addon/shop/shop.php', 'shop_cron');
+    Route::register('addon/shop/modules/Mod_Shop_settings.php', 'shop_settings');
     foreach (Shop::getAllPages() as $page) {
         Route::register('addon/custompage/modules/shop/Mod_' . ucfirst($page) . '.php', $page);
     }
@@ -320,6 +329,7 @@ function shop_unload() {
     Hook::unregister('module_loaded', 'addon/shop/shop.php', 'shop_load_module');
     Hook::unregister('load_pdl', 'addon/shop/shop.php', 'shop_load_pdl');
     Hook::unregister('cron', 'addon/shop/shop.php', 'shop_cron');
+    Route::unregister('addon/shop/modules/Mod_Shop_settings.php', 'shop_settings');
     foreach (Shop::getAllPages() as $page) {
         Route::unregister('addon/custompage/modules/shop/Mod_' . ucfirst($page) . '.php', $page);
     }
