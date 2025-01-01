@@ -10,6 +10,7 @@ namespace Zotlabs\Module;
 use App;
 use Zotlabs\Lib\Apps;
 use Zotlabs\Web\Controller;
+use Zotlabs\Extend\Route;
 
 // Shop_settings class "controller" logic for the plugin's "shop_settings" route
 class Shop_settings extends Controller {
@@ -19,16 +20,15 @@ class Shop_settings extends Controller {
 	
 	// Method executed during page initialization
 	public function init(): void {
-        // If the user is NOT logged in as an Admin, then do nothing
-        if (!is_site_admin()) {
-			return;
-		}
 		// Set pluginName string to this class's name 
 		$this->_pluginName = strtolower(trim(strrchr(__CLASS__, '\\'), '\\'));
 	}
 	
 	// Generic handler for a HTTP POST request (e.g., a form submission)
 	public function post(): void {
+        // If the user is NOT logged in as an Admin, then do nothing
+		if (!is_site_admin()) killme();
+
 		// Presumably, check for a valid CSRF form token
 		check_form_security_token_redirectOnErr('/' . $this->_pluginName, $this->_pluginName);
 
@@ -37,7 +37,9 @@ class Shop_settings extends Controller {
 		// Add the custom variable's key-value pair to the "config" database table
 		if (argc() > 1 && argv(1) == 'add' && !empty(trim($_POST['plan_name'])) && preg_match('/^(\d+\.\d{2})$/', $_POST['plan_cost']) == 1)
 		{
-			$newplan = [$_POST['plan_cost'] => trim($_POST['plan_name'])];
+			$planName = trim($_POST['plan_name']);
+			Route::register('addon/custompage/modules/shop/Mod_' . ucfirst($planName) . '.php', $planName);
+			$newplan = [$_POST['plan_cost'] => $planName];
 			$plans = get_config('shop', 'plans');
 			$plans = (!$plans || empty($plans)) ? $newplan : array_merge($newplan, $plans);
 			ksort($plans);
@@ -47,6 +49,7 @@ class Shop_settings extends Controller {
 		{
 			$plans = get_config('shop', 'plans');
 			if ($plans !== false && !empty($plans) && isset($plans[$_POST['plan_remove']])) {
+				Route::unregister('addon/custompage/modules/shop/Mod_' . ucfirst($plans[$_POST['plan_remove']]) . '.php', $plans[$_POST['plan_remove']]);
 				unset($plans[$_POST['plan_remove']]);
 				set_config('shop', 'plans', 'json:' . json_encode($plans));
 			}
@@ -74,20 +77,11 @@ class Shop_settings extends Controller {
 
 	// Generic handler for a HTTP GET request (e.g., viewing the page normally)
 	public function get(): string {
-		// Reload the "config" (database table) settings in the "testplugin2" category, because they not available yet
-		unset(App::$config['shop']);
-		load_config('shop');
+        // If the user is NOT logged in as an Admin, then do nothing
+		if (!is_site_admin()) return '';
 
-		// If this is an Add request, load "config" (database table) settings in the "testplugin2" category into an array
-        $variables = [];
-        if (!empty(App::$config['shop'])) {
-            foreach (App::$config['shop'] as $varName => $varValue) {
-                if ($varName != 'config_loaded') {
-                    $varValue = (preg_match('/^(json:)/', $varValue) == 1) ? json_decode(preg_replace('/^(json:)/', "", $varValue), true) : $varValue;
-					$variables[$varName] = $varValue;
-                }
-            }
-        }
+		// Load "config" (database table) settings in the "shop" category into an array
+        $variables = \Shop::loadShopConfig();
 
 		// Create "Name" field markup in Add/Edit form and insert template vars
 		$planName = replace_macros(get_markup_template('field_input.tpl'), [

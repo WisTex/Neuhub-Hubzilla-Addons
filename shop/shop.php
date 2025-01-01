@@ -22,26 +22,22 @@ use Zotlabs\Extend\Route;
 use Zotlabs\Lib\Config;
 
 class Shop {
-    const _SHOP_PAGES = ['shop'];  // For all "/shop/*" pages
-    const _PLAN_PAGES = ['starter', 'premium'];  // For all "/starter/*" or "/premium/*" pages
-    const _TERM_LENGTH = '1';
-    const _TERM_UNITS = 'MONTH';  // YEAR, MONTH, DAY, HOUR, MINUTE, or SECOND
+    const _SHOP_PAGES = ['shop'];  // Base path for all "/shop/*" pages
+    const _PLAN_PAGES = SHOP_PLAN_PAGES;  // Base path for plan pages. E.g., "/starter/*" or "/premium/*"
+    const _TERM_LENGTH = SHOP_TERM_LENGTH;
+    const _TERM_UNITS = SHOP_TERM_UNITS;  // YEAR, MONTH, DAY, HOUR, MINUTE, or SECOND
     const _TERM_OPTS = [					
         'YEAR' => 'YEAR',
-        'MONTH' => 'MONTH'  ,
-        'DAY' => 'DAY'   ,
-        'HOUR' => 'HOUR'  ,
-        'MINUTE' => 'MINUTE' ,
+        'MONTH' => 'MONTH',
+        'DAY' => 'DAY',
+        'HOUR' => 'HOUR',
+        'MINUTE' => 'MINUTE',
         'SECOND' => 'SECOND'
     ];
-    const _PLANS = [
-        // Must be listed in ascending order!
-        '9.95' => 'starter',
-        '19.95' => 'premium'
-    ];
-    const _PAYPAL_EMAILS = ['chump2877-facilitator@yahoo.com'];  // Include both sandbox and live emails
-    const _PAYPAL_PDT_TOKEN = 'UpM6gyqLdAvKjBNRyEjLP3GF82et_W0uPYStNIxefauuo1lqAJqvlLPb5Qi';
-    const _PAYPAL_SANDBOX = true;
+    const _PLANS = SHOP_PLANS;  // Must be ordered by key (price) in ascending order!
+    const _PAYPAL_EMAILS = SHOP_PAYPAL_EMAILS;  // Include both sandbox and live emails
+    const _PAYPAL_PDT_TOKEN = SHOP_PAYPAL_PDT_TOKEN;
+    const _PAYPAL_SANDBOX = SHOP_PAYPAL_SANDBOX;
     public static function getAllPages(): array {
         return array_merge(self::_SHOP_PAGES, self::_PLAN_PAGES);
     }
@@ -305,7 +301,31 @@ class Shop {
             }           
         }
     }
+    public static function loadShopConfig(): array {
+        $variables = [];
+        if (empty(App::$config['shop'])) load_config('shop');
+        if (!empty(App::$config['shop'])) {
+            foreach (App::$config['shop'] as $varName => $varValue) {
+                if ($varName != 'config_loaded') {
+                    $varValue = (preg_match('/^(json:)/', $varValue) == 1) ? json_decode(preg_replace('/^(json:)/', "", $varValue), true) : $varValue;
+					$variables[$varName] = $varValue;
+                }
+            }
+        }
+        App::$cache['shop_config_vars'] = $variables;
+        return $variables;    
+    }
 }
+
+// Database Config Constants
+Shop::loadShopConfig();
+define('SHOP_PLAN_PAGES', array_values(App::$cache['shop_config_vars']['plans'] ?? []));
+define('SHOP_TERM_LENGTH', App::$cache['shop_config_vars']['term_length'] ?? '1');
+define('SHOP_TERM_UNITS', App::$cache['shop_config_vars']['term_units'] ?? 'MONTH');
+define('SHOP_PLANS', App::$cache['shop_config_vars']['plans'] ?? []);
+define('SHOP_PAYPAL_EMAILS', preg_split('/(,\s*)|(;\s*)/', App::$cache['shop_config_vars']['paypal_emails'] ?? '', -1, PREG_SPLIT_NO_EMPTY));
+define('SHOP_PAYPAL_PDT_TOKEN', App::$cache['shop_config_vars']['paypal_pdt_token'] ?? '');
+define('SHOP_PAYPAL_SANDBOX', (bool)(App::$cache['shop_config_vars']['paypal_sandbox'] ?? '1'));
 
 /**
  * * This function registers (adds) the hook handler and route.
