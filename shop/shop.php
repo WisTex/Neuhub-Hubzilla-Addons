@@ -4,6 +4,7 @@
  * Description: Adds various ecommerce functionality.
  * Version: 1.0
  * Depends: Core, CustomPage
+ * Requires: custompage
  * Recommends: None
  * Category: Ecommerce
  * Author: Randall Jaffe
