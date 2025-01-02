@@ -73,20 +73,24 @@ class Shop {
         if (!$r) {
             logger('[shop] Error running Shop::init() CREATE TABLE sql query: ' . $sql);
         }
+        self::makeServiceClasses(self::_PLANS);
+    }
+    public static function makeServiceClasses(array $plans): void {
         Config::Set('system', 'default_service_class', 'default');
-        $serviceClassVals = self::generateCumulativeValues(count(self::_PLANS));
-        Config::Set('service_class', 'default', self::buildServiceClass(array_shift($serviceClassVals)));
-        $plans = array_values(self::_PLANS);
-        foreach ($plans as $k => $plan) {
-            Config::Set('service_class', $plan, self::buildServiceClass($serviceClassVals[$k]));
-            logger('[shop] Shop::init(): Created service class: ' . $plan);
+        if (!empty($plans)) {
+            $plans = array_values($plans);
+            $serviceClassVals = self::generateCumulativeValues(count($plans));
+            Config::Set('service_class', 'default', self::buildServiceClass(array_shift($serviceClassVals), $plans));
+            foreach ($plans as $k => $plan) {
+                Config::Set('service_class', $plan, self::buildServiceClass($serviceClassVals[$k], $plans));
+                logger('[shop] Shop::init(): Created service class: ' . $plan);
+            }
         }
         /* To-Do: Consider setting a "default" service level for all existing accounts with no/empty service level? */
     }
-    private static function buildServiceClass(array $values): string {
+    private static function buildServiceClass(array $values, array $plans): string {
         $serviceClass = 'json:{';
-        $values = (count($values) != count(self::_PLANS)) ? array_fill(0, count(self::_PLANS), '0') : $values;
-        $plans = array_values(self::_PLANS);
+        $values = (count($values) != count($plans)) ? array_fill(0, count($plans), '0') : $values;
         foreach ($plans as $k => $plan) {
             $serviceClass .= '"' . $plan . '":"' . $values[$k] . '"';
             $serviceClass .= ($plan != end($plans)) ? ',' : '';

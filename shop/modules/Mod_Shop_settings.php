@@ -37,20 +37,25 @@ class Shop_settings extends Controller {
 		// Add the custom variable's key-value pair to the "config" database table
 		if (argc() > 1 && argv(1) == 'add' && !empty(trim($_POST['plan_name'])) && preg_match('/^(\d+\.\d{2})$/', $_POST['plan_cost']) == 1)
 		{
-			$planName = trim($_POST['plan_name']);
-			Route::register('addon/custompage/modules/shop/Mod_' . ucfirst($planName) . '.php', $planName);
-			$newplan = [$_POST['plan_cost'] => $planName];
-			$plans = get_config('shop', 'plans');
-			$plans = (!$plans || empty($plans)) ? $newplan : array_merge($newplan, $plans);
-			ksort($plans);
-			set_config('shop', 'plans', 'json:' . json_encode($plans));
+			$plans = (array)get_config('shop', 'plans');
+			if (!isset($plans[$_POST['plan_cost']])) {
+				$planName = preg_replace('/[^a-zA-Z0-9_-]/', "", trim($_POST['plan_name']));
+				Route::register('addon/custompage/modules/shop/Mod_' . ucfirst($planName) . '.php', $planName);
+				$newplan = [$_POST['plan_cost'] => $planName];
+				$plans = (empty($plans) || current($plans) === false) ? $newplan : array_merge($newplan, $plans);
+				ksort($plans);
+				\Shop::makeServiceClasses($plans);
+				set_config('shop', 'plans', 'json:' . json_encode($plans));
+			}
 		}
 		if (argc() > 1 && argv(1) == 'remove' && !empty($_POST['plan_remove']))
 		{
 			$plans = get_config('shop', 'plans');
 			if ($plans !== false && !empty($plans) && isset($plans[$_POST['plan_remove']])) {
 				Route::unregister('addon/custompage/modules/shop/Mod_' . ucfirst($plans[$_POST['plan_remove']]) . '.php', $plans[$_POST['plan_remove']]);
+				del_config('service_class', $plans[$_POST['plan_remove']]);
 				unset($plans[$_POST['plan_remove']]);
+				\Shop::makeServiceClasses($plans);
 				set_config('shop', 'plans', 'json:' . json_encode($plans));
 			}
 		}		
