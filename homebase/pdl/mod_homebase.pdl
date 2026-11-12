@@ -1,0 +1,5 @@
+[template]default[/template]
+[region=content]
+[widget=HomebaseNav][/widget]
+[widget=HomebaseWelcome][/widget]
+[/region]
