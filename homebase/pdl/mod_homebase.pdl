@@ -1,4 +1,4 @@
-[template]full[/template]
+[template]default[/template]
 [region=aside]
 [widget=messages][/widget]
 [widget=hq_controls]
