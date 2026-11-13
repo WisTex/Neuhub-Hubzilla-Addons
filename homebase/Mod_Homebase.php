@@ -21,6 +21,9 @@ class Homebase extends Controller {
             goaway(z_root() . '/login');
         }
         App::$profile_uid = local_channel();
+        // Hubzilla's navbar reads App::$nav_sel, set by nav_set_selected().
+        // Setting App::$page['title'] alone does not select a display app name.
+        nav_set_selected('Home Base');
     }
 
     public function get() {
