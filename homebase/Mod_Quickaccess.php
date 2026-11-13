@@ -20,6 +20,8 @@ class Quickaccess extends Controller {
             goaway(z_root() . '/login');
         }
         App::$profile_uid = local_channel();
+        // Match Hubzilla's native navbar selection/display-name mechanism.
+        nav_set_selected('Quick Access');
     }
 
     public function get() {
