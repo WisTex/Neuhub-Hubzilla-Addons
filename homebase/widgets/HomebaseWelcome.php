@@ -12,6 +12,10 @@ class HomebaseWelcome {
     public function widget($args) {
         $ctx = \homebase_context();
         if (!$ctx['authenticated']) return '';
-        return '<section class="homebase-welcome mb-3"><h2 class="h4">' . htmlspecialchars(t('Welcome'), ENT_QUOTES, 'UTF-8') . ($ctx['name'] ? ', ' . htmlspecialchars($ctx['name'], ENT_QUOTES, 'UTF-8') : '') . '</h2><p>' . htmlspecialchars(t('Your Home Base for Hubzilla navigation and resources.'), ENT_QUOTES, 'UTF-8') . '</p></section>';
+        return replace_macros(get_markup_template('homebase_welcome.tpl', 'addon/homebase'), [
+            '$welcome' => htmlspecialchars(t('Welcome'), ENT_QUOTES, 'UTF-8'),
+            '$name' => htmlspecialchars($ctx['name'], ENT_QUOTES, 'UTF-8'),
+            '$message' => htmlspecialchars(t('Your Home Base for Hubzilla navigation and resources.'), ENT_QUOTES, 'UTF-8')
+        ]);
     }
 }
