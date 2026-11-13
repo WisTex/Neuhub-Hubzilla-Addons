@@ -13,8 +13,8 @@ require_once('addon/homebase/lib.php');
  * The PHP class name must match the name passed to Widget::register().
  */
 class HomebaseNav {
-    /** Comanche: [widget=HomebaseNav] or [widget=HomebaseNav][var=orientation]vertical[/var][/widget] */
+    /** Comanche: [widget=HomebaseNav]. Uses a dedicated Bootstrap navbar TPL. */
     public function widget($args) {
-        return \homebase_widget('nav', '', is_array($args) ? $args : []);
+        return \homebase_navbar(is_array($args) ? $args : []);
     }
 }
