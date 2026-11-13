@@ -16,7 +16,7 @@ function homebase_context() {
     if (!$address && $observer) {
         $address = explode('@', $observer['xchan_addr'] ?? '')[0];
     }
-    return ['base' => $base, 'address' => $address, 'name' => $local && $channel ? $channel['channel_name'] : ($observer['xchan_name'] ?? ''), 'authenticated' => (bool)($local || $observer)];
+    return ['base' => $base, 'local_base' => rtrim(z_root(), '/'), 'address' => $address, 'name' => $local && $channel ? $channel['channel_name'] : ($observer['xchan_name'] ?? ''), 'authenticated' => (bool)($local || $observer)];
 }
 
 function homebase_items($group) {
@@ -68,9 +68,12 @@ function homebase_items($group) {
 }
 
 function homebase_url($path, $ctx) {
-    if (!$ctx['base']) return '';
+    // Addon routes are always local, even for authenticated remote observers.
+    $local_route = in_array($path, ['homebase', 'quickaccess'], true);
+    $base = $local_route ? $ctx['local_base'] : $ctx['base'];
+    if (!$base) return '';
     $path = str_replace('{channel}', rawurlencode($ctx['address']), $path);
-    return $ctx['base'] . '/' . ltrim($path, '/');
+    return $base . '/' . ltrim($path, '/');
 }
 
 /**
