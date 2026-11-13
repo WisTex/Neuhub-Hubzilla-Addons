@@ -13,6 +13,7 @@ use Zotlabs\Extend\Route;
 
 function homebase_load() {
     Route::register('addon/homebase/Mod_Homebase.php', 'homebase');
+    Route::register('addon/homebase/Mod_Quickaccess.php', 'quickaccess');
     foreach (['HomebaseNav','HomebaseWelcome','HomebaseCommunications','HomebaseContacts','HomebaseChannel','HomebaseConfiguration','HomebaseNetworks'] as $name) {
         Widget::register('addon/homebase/widgets/' . $name . '.php', $name);
     }
@@ -20,6 +21,7 @@ function homebase_load() {
 
 function homebase_unload() {
     Route::unregister('addon/homebase/Mod_Homebase.php', 'homebase');
+    Route::unregister('addon/homebase/Mod_Quickaccess.php', 'quickaccess');
     foreach (['HomebaseNav','HomebaseWelcome','HomebaseCommunications','HomebaseContacts','HomebaseChannel','HomebaseConfiguration','HomebaseNetworks'] as $name) {
         Widget::unregister('addon/homebase/widgets/' . $name . '.php', $name);
     }
