@@ -112,7 +112,10 @@ function homebase_navbar($args = []) {
     $name = $channel['channel_name'] ?? '';
     $observer = \App::get_observer();
     $avatar = $observer['xchan_photo_m'] ?? '';
-    $page_title = \App::$page['title'] ?? '';
+    // Hubzilla's redbasic navbar displays the translated active app name.
+    // page_title is initialized by Router to the lowercase module slug.
+    $page_title = \App::$nav_sel['name'] ?? '';
+    if (!$page_title) $page_title = \App::$page['title'] ?? '';
     if (!$page_title) $page_title = \App::$page['page_title'] ?? '';
     if (!$page_title) $page_title = t('Home Base');
 
