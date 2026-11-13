@@ -39,7 +39,7 @@ function homebase_items($group) {
             ['Home Base','homebase','Personal dashboard'],
             ['Quick Access','quickaccess','Hubzilla features and tools'],
             ['Headquarters (HQ)','hq','Notifications and incoming posts'],
-            ['Channel','channel/{channel}','Your channel'],
+            ['Direct Messages','network/?f=&dm=1','Private conversations'],
             ['Connections','connections','Manage connections']
         ],
         'communications' => [
@@ -93,6 +93,47 @@ function homebase_url($path, $ctx) {
     if (!$base) return '';
     $path = str_replace('{channel}', rawurlencode($ctx['address']), $path);
     return $base . '/' . ltrim($path, '/');
+}
+
+/**
+ * Bootstrap 5 common navigation. The page heading is supplied by Hubzilla,
+ * not inferred from the active menu item. The avatar identifies the active
+ * local channel and links to its channel page; Hubzilla's account dropdown
+ * remains responsible for switching identities.
+ *
+ * Keep this separate from homebase_widget(): that renderer intentionally
+ * remains the shared presentation for Quick Access link-list widgets.
+ */
+function homebase_navbar($args = []) {
+    $channel = local_channel() ? \App::get_channel() : null;
+    if (!$channel) return '';
+
+    $address = $channel['channel_address'] ?? '';
+    $name = $channel['channel_name'] ?? '';
+    $observer = \App::get_observer();
+    $avatar = $observer['xchan_photo_m'] ?? '';
+    $page_title = \App::$page['title'] ?? '';
+    if (!$page_title) $page_title = \App::$page['page_title'] ?? '';
+    if (!$page_title) $page_title = t('Home Base');
+
+    $items = [];
+    foreach (homebase_items('nav') as $item) {
+        [$label, $path] = $item;
+        $url = homebase_url($path, homebase_context());
+        $items[] = [
+            'label' => htmlspecialchars(t($label), ENT_QUOTES, 'UTF-8'),
+            'url' => htmlspecialchars($url, ENT_QUOTES, 'UTF-8'),
+            'active' => trim(parse_url($url, PHP_URL_PATH) ?? '', '/') === trim(\App::$module ?? '', '/')
+        ];
+    }
+    return replace_macros(homebase_template('homebase_navbar.tpl'), [
+        '$title' => htmlspecialchars((string)$page_title, ENT_QUOTES, 'UTF-8'),
+        '$channel_name' => htmlspecialchars((string)$name, ENT_QUOTES, 'UTF-8'),
+        '$channel_url' => htmlspecialchars(z_root() . '/channel/' . rawurlencode($address), ENT_QUOTES, 'UTF-8'),
+        '$avatar' => htmlspecialchars((string)$avatar, ENT_QUOTES, 'UTF-8'),
+        '$items' => $items,
+        '$collapse_id' => 'homebase-common-nav'
+    ]);
 }
 
 /**
