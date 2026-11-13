@@ -4,7 +4,15 @@
  * License: MIT Expat License. See LICENSE.
  */
 
-/** Shared widget data and HTML output; no WisTex-specific runtime dependencies. */
+/**
+ * Shared widget data and rendering; no WisTex-specific runtime dependencies.
+ * Keep widget classes thin so that PDL can place them independently.
+ */
+/**
+ * Resolve the current local channel or remotely authenticated observer.
+ * A remote observer's channel URL is not necessarily the server root;
+ * remote navigation remains provisional until home-hub URLs are verified.
+ */
 function homebase_context() {
     $observer = \App::get_observer();
     $local = local_channel();
@@ -19,6 +27,12 @@ function homebase_context() {
     return ['base' => $base, 'local_base' => rtrim(z_root(), '/'), 'address' => $address, 'name' => $local && $channel ? $channel['channel_name'] : ($observer['xchan_name'] ?? ''), 'authenticated' => (bool)($local || $observer)];
 }
 
+/**
+ * Link-list data only. Keep the groups independent of page layout: each group
+ * is rendered by its own registered widget and can move between PDL regions.
+ * Federation destinations are provisional; check addon enablement and routes
+ * before making those entries part of a launch-ready navigation experience.
+ */
 function homebase_items($group) {
     $groups = [
         'nav' => [
@@ -67,6 +81,11 @@ function homebase_items($group) {
     return $groups[$group] ?? [];
 }
 
+/**
+ * Home Base and Quick Access are routes on THIS hub, even when the visitor
+ * authenticated remotely. Other paths currently use the context's base URL.
+ * Do not inadvertently redirect the addon's own navigation to another hub.
+ */
 function homebase_url($path, $ctx) {
     // Addon routes are always local, even for authenticated remote observers.
     $local_route = in_array($path, ['homebase', 'quickaccess'], true);
@@ -88,7 +107,8 @@ function homebase_template($filename) {
 /**
  * Render a Home Base widget with Hubzilla's standard template lookup.
  * The addon supplies the fallback; theme and site overrides use Hubzilla's
- * native get_markup_template() resolution.
+ * native get_markup_template() resolution. One shared link-list TPL is
+ * intentional; different widgets supply different data and arguments.
  */
 function homebase_widget($group, $title, $args = []) {
     $ctx = homebase_context();
