@@ -12,7 +12,7 @@ class HomebaseWelcome {
     public function widget($args) {
         $ctx = \homebase_context();
         if (!$ctx['authenticated']) return '';
-        return replace_macros(get_markup_template('homebase_welcome.tpl', 'addon/homebase'), [
+        return replace_macros(\homebase_template('homebase_welcome.tpl'), [
             '$welcome' => htmlspecialchars(t('Welcome'), ENT_QUOTES, 'UTF-8'),
             '$name' => htmlspecialchars($ctx['name'], ENT_QUOTES, 'UTF-8'),
             '$message' => htmlspecialchars(t('Your Home Base for Hubzilla navigation and resources.'), ENT_QUOTES, 'UTF-8')
