@@ -24,14 +24,7 @@ class Quickaccess extends Controller {
             return '<p>' . htmlspecialchars(t('Page not found.'), ENT_QUOTES, 'UTF-8') . '</p>';
         }
         App::$page['title'] = t('Quick Access');
-        if (!App::$pdl) {
-            return homebase_widget('nav', '', ['orientation' => 'horizontal'])
-                . homebase_widget('communications', 'Communications')
-                . homebase_widget('contacts', 'Contacts')
-                . homebase_widget('channel', 'Channel Features')
-                . homebase_widget('configuration', 'Configuration')
-                . homebase_widget('networks', 'Networks');
-        }
+        // Hubzilla renders the registered PDL and its widgets.
         return '';
     }
 }
