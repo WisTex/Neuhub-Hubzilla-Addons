@@ -73,24 +73,32 @@ function homebase_url($path, $ctx) {
     return $ctx['base'] . '/' . ltrim($path, '/');
 }
 
+/**
+ * Render a Home Base widget with Hubzilla's standard template lookup.
+ * The addon supplies the fallback; theme and site overrides use Hubzilla's
+ * native get_markup_template() resolution.
+ */
 function homebase_widget($group, $title, $args = []) {
     $ctx = homebase_context();
     if (!$ctx['authenticated']) return '';
+
     $orientation = strtolower((string)($args['orientation'] ?? ($group === 'nav' ? 'horizontal' : 'vertical')));
-    if (!in_array($orientation, ['horizontal','vertical'], true)) $orientation = 'vertical';
+    if (!in_array($orientation, ['horizontal', 'vertical'], true)) $orientation = 'vertical';
     $horizontal = $orientation === 'horizontal';
-    $html = '<section class="homebase-widget mb-3">';
-    if ($title && empty($args['hide_title'])) $html .= '<h3 class="h5">' . htmlspecialchars(t($title), ENT_QUOTES, 'UTF-8') . '</h3>';
-    $html .= '<ul class="list-unstyled ' . ($horizontal ? 'd-flex flex-wrap gap-3' : '') . '">';
+    $items = [];
     foreach (homebase_items($group) as $item) {
         [$label, $path, $description] = $item;
-        $label = htmlspecialchars(t($label), ENT_QUOTES, 'UTF-8');
-        $description = htmlspecialchars(t($description), ENT_QUOTES, 'UTF-8');
-        $url = $path ? homebase_url($path, $ctx) : '';
-        $html .= '<li class="' . ($horizontal ? '' : 'mb-2') . '">';
-        $html .= $url ? '<a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">' . $label . '</a>' : '<strong>' . $label . '</strong>';
-        if (!$horizontal && empty($args['hide_descriptions'])) $html .= '<div class="small text-muted">' . $description . '</div>';
-        $html .= '</li>';
+        $items[] = [
+            'label' => htmlspecialchars(t($label), ENT_QUOTES, 'UTF-8'),
+            'description' => htmlspecialchars(t($description), ENT_QUOTES, 'UTF-8'),
+            'url' => $path ? htmlspecialchars(homebase_url($path, $ctx), ENT_QUOTES, 'UTF-8') : ''
+        ];
     }
-    return $html . '</ul></section>';
+
+    return replace_macros(get_markup_template('homebase_links.tpl', 'addon/homebase'), [
+        '$title' => $title && empty($args['hide_title']) ? htmlspecialchars(t($title), ENT_QUOTES, 'UTF-8') : '',
+        '$horizontal' => $horizontal,
+        '$descriptions' => empty($args['hide_descriptions']),
+        '$items' => $items
+    ]);
 }
