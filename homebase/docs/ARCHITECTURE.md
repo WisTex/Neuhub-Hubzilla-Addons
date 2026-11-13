@@ -46,7 +46,7 @@ The bundled PDLs use `[template]default[/template]` and define `aside`, `content
 
 `homebase_template($filename)` first calls `get_markup_template($filename)`, allowing Hubzilla's normal active theme/site/core lookup to resolve a matching template. If none is found, it calls `get_markup_template($filename, 'addon/homebase')` for the bundled fallback. Passing the addon root **first** would prevent normal global site overrides from being found in the expected location. This two-step lookup is intentional.
 
-Six navigation widgets share one link-list TPL. This is intentional because they render the same presentation pattern; each widget supplies its own group, title, and optional orientation arguments.
+Five Quick Access link-list widgets share one link-list TPL. The common HomebaseNav widget instead uses a Bootstrap 5 navbar template. Its avatar links to the active local channel and its page heading comes from Hubzilla's page metadata; it does not duplicate Hubzilla's identity dropdown. This is intentional because they render the same presentation pattern; each widget supplies its own group, title, and optional orientation arguments.
 
 ## Navigation and identity
 
