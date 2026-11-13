@@ -10,7 +10,7 @@ Visit `/homebase` for the dashboard or `/quickaccess` for feature links. A local
 
 ## Customization
 
-The addon supplies default layouts. Administrators can customize them using Hubzilla's PDL editor or site PDL overrides (`view/site/pdl/mod_homebase.pdl` and `mod_quickaccess.pdl`). Site and theme TPL overrides can customize widget appearance without modifying the addon.
+The addon supplies default layouts. Administrators can customize them using Hubzilla's PDL editor or site PDL overrides (`view/site/pdl/mod_homebase.pdl` and `mod_quickaccess.pdl`). Site and theme TPL overrides can customize widget appearance without modifying the addon. The common navbar includes the active channel avatar and current page title.
 
 Developer documentation: [Architecture and implementation notes](docs/ARCHITECTURE.md).
 
