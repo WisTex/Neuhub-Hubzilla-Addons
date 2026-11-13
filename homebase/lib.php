@@ -23,7 +23,7 @@ function homebase_items($group) {
     $groups = [
         'nav' => [
             ['Home Base','homebase','Personal dashboard'],
-            ['Quick Access','homebase/quickaccess','Hubzilla features and tools'],
+            ['Quick Access','quickaccess','Hubzilla features and tools'],
             ['Headquarters (HQ)','hq','Notifications and incoming posts'],
             ['Channel','channel/{channel}','Your channel'],
             ['Connections','connections','Manage connections']
@@ -74,6 +74,15 @@ function homebase_url($path, $ctx) {
 }
 
 /**
+ * Prefer Hubzilla's normal theme/site/core lookup. If no override exists,
+ * use the addon-bundled template as the fallback.
+ */
+function homebase_template($filename) {
+    $template = get_markup_template($filename);
+    return $template ?: get_markup_template($filename, 'addon/homebase');
+}
+
+/**
  * Render a Home Base widget with Hubzilla's standard template lookup.
  * The addon supplies the fallback; theme and site overrides use Hubzilla's
  * native get_markup_template() resolution.
@@ -95,7 +104,7 @@ function homebase_widget($group, $title, $args = []) {
         ];
     }
 
-    return replace_macros(get_markup_template('homebase_links.tpl', 'addon/homebase'), [
+    return replace_macros(homebase_template('homebase_links.tpl'), [
         '$title' => $title && empty($args['hide_title']) ? htmlspecialchars(t($title), ENT_QUOTES, 'UTF-8') : '',
         '$horizontal' => $horizontal,
         '$descriptions' => empty($args['hide_descriptions']),
