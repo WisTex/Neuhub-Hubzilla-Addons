@@ -4,9 +4,9 @@ Hubzilla addon with a local-channel dashboard, Quick Access page and seven reusa
 
 ## Installation
 
-Place this directory at `addon/homebase` in your Hubzilla installation, enable **Home Base** through the administrator's addon management, and visit `/homebase` or `/homebase/quickaccess`.
+Place this directory at `addon/homebase` in your Hubzilla installation, enable **Home Base** through the administrator's addon management, and visit `/homebase` or `/quickaccess`.
 
-The addon registers its own route and widgets. Default PDL layout files must be installed under `view/site/pdl/` if not already provided by a theme; see `pdl/` for the templates. Existing site/theme/channel PDL overrides take precedence. Do not overwrite existing site PDL files.
+The addon registers its own route and widgets. The two modules use separate PDL overrides: `view/site/pdl/mod_homebase.pdl` and `view/site/pdl/mod_quickaccess.pdl`. Copy the example layouts from `pdl/` when desired. The addon widgets are independently movable through the PDL editor. Site TPL overrides belong in `view/site/tpl/homebase_links.tpl` and `view/site/tpl/homebase_welcome.tpl`; normal Hubzilla theme/site template lookup takes priority over addon defaults. Existing site/theme/channel PDL overrides take precedence. Do not overwrite existing site PDL files.
 
 ## Widgets
 
