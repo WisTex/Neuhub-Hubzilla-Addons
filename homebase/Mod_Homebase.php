@@ -25,13 +25,7 @@ class Homebase extends Controller {
             return '<p>' . htmlspecialchars(t('Page not found.'), ENT_QUOTES, 'UTF-8') . '</p>';
         }
         App::$page['title'] = t('Home Base');
-        // The PDL content region is populated by Hubzilla; return an accessible fallback
-        // if no PDL layout has been loaded.
-        if (!App::$pdl) {
-            $out = homebase_widget('nav', '', ['orientation' => 'horizontal']);
-            $out .= '<h2>' . htmlspecialchars(t('Home Base'), ENT_QUOTES, 'UTF-8') . '</h2>';
-            return $out;
-        }
+        // Hubzilla renders the registered PDL and its widgets.
         return '';
     }
 }
