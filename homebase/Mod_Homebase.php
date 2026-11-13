@@ -9,6 +9,11 @@ namespace Zotlabs\Module;
 use App;
 use Zotlabs\Web\Controller;
 
+/**
+ * Module controller: authentication and page metadata only.
+ * Hubzilla's registered module PDL renders the page regions and widgets.
+ * Do not rebuild widget layout here; administrators customize it through PDL.
+ */
 class Homebase extends Controller {
     public function init() {
         if (!local_channel()) {
